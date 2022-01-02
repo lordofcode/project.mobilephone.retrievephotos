@@ -15,7 +15,7 @@ I implemented a few items which I need from the external_drive_lib, so I can "ab
 
 Then I created the "UsbSync" C# program which uses my PhoneConnector library.
 
-In the App.config file I configure all settings. If you set <add key="debug" value="true" /> then you can copy the path of the folder you select in the tree. You can use that value in the "mobile_photo" en "mobile_whatsapp" settings. And you can also set "preset_phone" if you have selected a phone in the first screen, so it auto-selects the next time you start searching for the connected phone.
+In the App.config file I configure all settings. If you set &lt;add key="debug" value="true" /&gt; then you can copy the path of the folder you select in the tree. You can use that value in the "mobile_photo" en "mobile_whatsapp" settings. And you can also set "preset_phone" if you have selected a phone in the first screen, so it auto-selects the next time you start searching for the connected phone.
 
 Step 1: clone external_drive_lib of John Torjo and build it with Visual Studio.
 
