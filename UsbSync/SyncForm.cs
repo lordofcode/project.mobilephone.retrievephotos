@@ -24,6 +24,9 @@ namespace UsbSync
         private bool _folderMode = true;
 
         private Stack<string> _previewImages = new Stack<string>();
+        private Timer _downloadTimer = new Timer();
+        private Stack<string> _downloadFiles = new Stack<string>();
+        private string _downloadLocation = string.Empty;
 
         public SyncForm()
         {
@@ -33,6 +36,43 @@ namespace UsbSync
         private void SyncForm_Load(object sender, EventArgs e)
         {
             Init();
+            _downloadTimer.Interval = 5000;
+            _downloadTimer.Tick += _downloadTimer_Tick;
+        }
+
+        private void _downloadTimer_Tick(object sender, EventArgs e)
+        {
+            _downloadTimer.Enabled = false;
+            try
+            {
+                if (_downloadFiles.Count > 0)
+                {
+                    _downloadTimer.Enabled = true;
+                    const int maxDownload = 10;
+                    var counter = 0;
+                    while (_downloadFiles.Count > 0 && counter < maxDownload)
+                    {
+                        var f = Utils.GetFileByPath(_downloadFiles.Pop());
+                        loadingStatusLabel.Text = $"Download {f.Name}";
+                        if (counter % 3 == 0)
+                        {
+                            this.Refresh();
+                        }
+                        Utils.CopyFile(f, _downloadLocation);
+                    }
+                }
+                else
+                {
+                    loadingStatusLabel.Text = "Download is afgerond.";
+                }
+            }
+            catch (Exception x) 
+            {
+                if (SettingsHelper.DebugMode)
+                {
+                    MessageBox.Show("Fout: " + x.Message + ", " + x.StackTrace);
+                }
+            }
         }
 
         public void Init()
@@ -129,15 +169,15 @@ namespace UsbSync
             {
                 return;
             }
-            _folderMode = false;
-            loadingStatusLabel.Text = folder.Name;
-            photoTree.Nodes.Clear();
-            photoTree.CheckBoxes = true;
-            cmbMonthSelection.Items.Clear();
-            cmbMonthSelection.Items.Add("Kies een maand om te selecteren.");
-            cmbMonthSelection.SelectedIndex = 0;
             try
             {
+                loadingStatusLabel.Text = folder.Name;
+                _folderMode = false;
+                photoTree.Nodes.Clear();
+                photoTree.CheckBoxes = true;
+                cmbMonthSelection.Items.Clear();
+                cmbMonthSelection.Items.Add("Kies een maand om te selecteren.");
+                cmbMonthSelection.SelectedIndex = 0;
                 foreach (var item in folder.Files.OrderByDescending(rec => rec.LastWriteTime))
                 {
                     var addedNode = photoTree.Nodes.Add($"{item.LastWriteTime.ToString("yyyy-MM-dd")} - {item.Name}");
@@ -179,9 +219,16 @@ namespace UsbSync
                 _previewImages.Push(url);
                 removeTimer.Start();
             }
-            catch (Exception)
+            catch (Exception x)
             { /* suppress */
-                //MessageBox.Show(x.Message);
+                if (SettingsHelper.DebugMode)
+                {
+                    MessageBox.Show("Fout: " + x.Message + ", " + x.StackTrace);
+                }
+                else
+                {
+                    MessageBox.Show("Er kan geen voorbeeld getoond worden.");
+                }
             }
         }
 
@@ -262,12 +309,17 @@ namespace UsbSync
 
         private void CheckByDate(string date)
         {
+            var doneChecking = false;
             foreach (TreeNode item in photoTree.Nodes)
             {
-                var file = Utils.GetFileByPath(item.Tag.ToString());
-                if (file.LastWriteTime.ToString("yyyy-MM") == date)
+                if (item.Text.StartsWith($"{date}-"))
                 {
                     item.Checked = true;
+                    doneChecking = true;
+                }
+                else if (doneChecking)
+                {
+                    return;
                 }
             }
         }
@@ -306,13 +358,13 @@ namespace UsbSync
             var saveLocation = saveLocationTree.SelectedNode;
             if (MessageBox.Show($"Wil je deze {selectedCount} foto's in de map {saveLocation.Text} opslaan?", "Bevestig import", MessageBoxButtons.OKCancel) == DialogResult.OK)
             {
+                _downloadLocation = saveLocation.Tag.ToString();
                 foreach (var selectedFile in checkedFiles)
                 {
-                    var f = Utils.GetFileByPath(selectedFile);
-                    loadingStatusLabel.Text = $"Kopie van {f.Name}";
-                    Utils.CopyFile(f, saveLocation.Tag.ToString());
+                    _downloadFiles.Push(selectedFile);
                 }
-                loadingStatusLabel.Text = "Klaar met kopieren.";
+                loadingStatusLabel.Text = "Start kopieren...";
+                _downloadTimer.Enabled = true;
                 return;
             }
             loadingStatusLabel.Text = "Kopieren geannuleerd.";

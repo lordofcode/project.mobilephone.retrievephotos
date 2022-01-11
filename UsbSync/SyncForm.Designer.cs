@@ -101,6 +101,7 @@ namespace UsbSync
             this.previewButton.TabIndex = 5;
             this.previewButton.Text = "&Toon voorbeeld";
             this.previewButton.UseVisualStyleBackColor = true;
+            this.previewButton.Visible = false;
             this.previewButton.Click += new System.EventHandler(this.previewButton_Click);
             // 
             // btnCopy
